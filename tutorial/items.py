@@ -16,3 +16,4 @@ class DmozItem(scrapy.Item):
     Quantity = scrapy.Field()
     Vendor = scrapy.Field()
     Type = scrapy.Field()
+    Handle = scrapy.Field()

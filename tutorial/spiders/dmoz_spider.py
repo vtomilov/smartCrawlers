@@ -48,6 +48,7 @@ class DmozSpider(scrapy.Spider):
     def __init__(self, start_url=None, *args, **kwargs):
         super(DmozSpider, self).__init__(*args, **kwargs)
         self.start_urls = [start_url]
+        self.handles = {}
 
  #    start_urls = [
 # 'http://beautydiscount.ru/catalog/everyday-minerals-ssha?page=all',
@@ -114,8 +115,18 @@ class DmozSpider(scrapy.Spider):
         self.sku = 21424
         for sel in response.xpath('//div[@class="product product_on_sale_page"]'):
             item = DmozItem()
-            item['Title'] = sel.xpath('div[@class="product_info"]/h3/a/span/text()').extract_first()
-            fname = sel.css('img').xpath('@src').extract_first().split('?')[0].split('/')[-1]
+            title = sel.xpath('div[@class="product_info"]/h3/a/span/text()').extract_first()
+            item['Title'] = title
+            handle = '-'.join(title.lower().split())
+            if self.handles.has_key(handle):
+                self.handles[handle] += 1
+                handle += '-' + str(self.handles[handle])
+            else:
+                self.handles[handle] = 1
+
+            Image_Src = sel.css('img').xpath('@src').extract_first().split('?')[0]
+            item['Handle'] = handle
+            fname = Image_Src.split('/')[-1]
             res = ""
             c = 0
             s = fname
@@ -136,7 +147,7 @@ class DmozSpider(scrapy.Spider):
 
             item['Image_Src'] = "https://cdn.shopify.com/s/files/1/1316/6641/files/" + res
             item['Vendor'] = " ".join(response.request.url.split('/')[-1].split('?')[0].split('-')[:-1]).title()
-            #self.dl(item['Image_Src'])
+            self.dl(Image_Src)
             item['Description'] = sel.xpath('div[@class="product_info"]/h3/a/text()[2]').extract_first().strip()
             price = int(sel.xpath('div[@class="product_info"]//tr[@class="variant"]//span[@class="price"]/text()').extract()[0].replace(" ", ""))
             price = int(1.05 * price)
@@ -149,6 +160,6 @@ class DmozSpider(scrapy.Spider):
             yield item
 
     def dl(self, url):
-        time.sleep(0.1)
-        prc = Popen("wget -P /Users/adelhafizova/scrapy_venv/tutorial/images/ %s" % url, shell=True)
+        time.sleep(0.01)
+        prc = Popen("wget -P /Users/vtomilov/Downloads/scrapy_venv/tutorial/images/ %s" % url, shell=True)
         prc.wait()
