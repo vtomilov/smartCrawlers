@@ -3,6 +3,7 @@ import scrapy
 import random
 import time
 from subprocess import Popen
+import os
 from transliterate import translit, get_available_language_codes
 import urllib
 
@@ -130,12 +131,15 @@ class DmozSpider(scrapy.Spider):
 
             Image_Src = sel.css('img').xpath('@src').extract_first().split('?')[0]
             item['Handle'] = handle
+            dirname = 1
+
             fname = Image_Src.split('/')[-1]
             defaultName = False
             try:
                 fname = urllib.unquote(fname).decode('utf8')
             except UnicodeEncodeError:
                 print (u"Can't decode %s" %fname)
+                dirname = 100
                 defaultName = True
                 
             fname = self.translit(fname)
@@ -159,7 +163,17 @@ class DmozSpider(scrapy.Spider):
 
             item['Image_Src'] = "https://cdn.shopify.com/s/files/1/1316/6641/files/" + fname
             item['Vendor'] = " ".join(response.request.url.split('/')[-1].split('?')[0].split('-')[:-1]).title()
-            dirname = 32 + (self.sku - 15000)/100
+
+            d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
+            if (not os.path.exists(d)):
+                os.mkdir(d)
+
+            while (len(os.walk("/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname).next()[2]) >= 100):
+                dirname += 1
+                d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
+                if (not os.path.exists(d)):
+                    os.mkdir(d)
+
             self.dl(Image_Src, fname, defaultName, dirname)
             item['Description'] = sel.xpath('div[@class="product_info"]/h3/a/text()[2]').extract_first().strip()
             price = int(sel.xpath('div[@class="product_info"]//tr[@class="variant"]//span[@class="price"]/text()').extract()[0].replace(" ", ""))
@@ -174,11 +188,12 @@ class DmozSpider(scrapy.Spider):
 
     def dl(self, url, filename, defaultName, dirname):
         time.sleep(0.01)
+        d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
         if (defaultName):
-            prc = Popen("wget -P /Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/ %s" % (dirname, url), shell=True)
+            prc = Popen("wget -P %s %s" % (d, url), shell=True)
             prc.wait()
         else:
-            prc = Popen("wget -O /Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/%s %s" % (dirname, filename, url), shell=True)
+            prc = Popen("wget -O %s%s %s" % (d, filename, url), shell=True)
             prc.wait()
 
     def translit(self, arg):
