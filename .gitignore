@@ -1,4 +1,5 @@
 images
+*.csv
 *.pyc
 **/*.pyc
 *.jpg
