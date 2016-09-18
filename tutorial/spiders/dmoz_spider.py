@@ -3,6 +3,8 @@ import scrapy
 import random
 import time
 from subprocess import Popen
+from transliterate import translit, get_available_language_codes
+import urllib
 
 from tutorial.items import DmozItem
 class DmozSpider(scrapy.Spider):
@@ -49,6 +51,9 @@ class DmozSpider(scrapy.Spider):
         super(DmozSpider, self).__init__(*args, **kwargs)
         self.start_urls = [start_url]
         self.handles = {}
+        self.cnt = 32
+        self.sku = 15000
+
 
  #    start_urls = [
 # 'http://beautydiscount.ru/catalog/everyday-minerals-ssha?page=all',
@@ -112,7 +117,6 @@ class DmozSpider(scrapy.Spider):
                                       
 #response.xpath('//div[@class="product product_on_sale_page"]/div[@class="product_info"]').xpath('h3/a/span/text()').extract()                     
     def parse(self, response):
-        self.sku = 21424
         for sel in response.xpath('//div[@class="product product_on_sale_page"]'):
             item = DmozItem()
             title = sel.xpath('div[@class="product_info"]/h3/a/span/text()').extract_first()
@@ -127,17 +131,25 @@ class DmozSpider(scrapy.Spider):
             Image_Src = sel.css('img').xpath('@src').extract_first().split('?')[0]
             item['Handle'] = handle
             fname = Image_Src.split('/')[-1]
-            res = ""
-            c = 0
-            s = fname
-            while c < len(s):
-    		if s[c] != '%':
-        	    res += s[c]
-    		else:
-        	    if s[c:c+3] == '%20':
-            		res += '_'
-        	    c += 2
-    		c+=1
+            defaultName = False
+            try:
+                fname = urllib.unquote(fname).decode('utf8')
+            except UnicodeEncodeError:
+                print (u"Can't decode %s" %fname)
+                defaultName = True
+                
+            fname = self.translit(fname)
+      #       res = ""
+      #       c = 0
+      #       s = fname
+      #       while c < len(s):
+    		# if s[c] != '%':
+      #   	    res += s[c]
+    		# else:
+      #   	    if s[c:c+3] == '%20':
+      #       		res += '_'
+      #   	    c += 2
+    		# c+=1
             #result = ""
             #c = 0
             #while c < len(res):
@@ -145,9 +157,10 @@ class DmozSpider(scrapy.Spider):
             #    while res[c] == "_" and c < len(res):
             #        c+=1
 
-            item['Image_Src'] = "https://cdn.shopify.com/s/files/1/1316/6641/files/" + res
+            item['Image_Src'] = "https://cdn.shopify.com/s/files/1/1316/6641/files/" + fname
             item['Vendor'] = " ".join(response.request.url.split('/')[-1].split('?')[0].split('-')[:-1]).title()
-            self.dl(Image_Src)
+            dirname = 32 + (self.sku - 15000)/100
+            self.dl(Image_Src, fname, defaultName, dirname)
             item['Description'] = sel.xpath('div[@class="product_info"]/h3/a/text()[2]').extract_first().strip()
             price = int(sel.xpath('div[@class="product_info"]//tr[@class="variant"]//span[@class="price"]/text()').extract()[0].replace(" ", ""))
             price = int(1.05 * price)
@@ -159,7 +172,17 @@ class DmozSpider(scrapy.Spider):
             self.sku += 1
             yield item
 
-    def dl(self, url):
+    def dl(self, url, filename, defaultName, dirname):
         time.sleep(0.01)
-        prc = Popen("wget -P /Users/vtomilov/Downloads/scrapy_venv/tutorial/images/ %s" % url, shell=True)
-        prc.wait()
+        if (defaultName):
+            prc = Popen("wget -P /Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/ %s" % (dirname, url), shell=True)
+            prc.wait()
+        else:
+            prc = Popen("wget -O /Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/%s %s" % (dirname, filename, url), shell=True)
+            prc.wait()
+
+    def translit(self, arg):
+        return '-'.join(translit(arg, 'ru', reversed=True).split())
+
+
+
