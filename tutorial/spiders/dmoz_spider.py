@@ -122,7 +122,7 @@ class DmozSpider(scrapy.Spider):
             item = DmozItem()
             title = sel.xpath('div[@class="product_info"]/h3/a/span/text()').extract_first()
             item['Title'] = title
-            handle = '-'.join(title.lower().split())
+            handle = self.translit(title)
             if self.handles.has_key(handle):
                 self.handles[handle] += 1
                 handle += '-' + str(self.handles[handle])
@@ -141,7 +141,8 @@ class DmozSpider(scrapy.Spider):
                 print (u"Can't decode %s" %fname)
                 dirname = 100
                 defaultName = True
-                
+            
+            fname = fname.replace("(", "").replace(")", "")
             fname = self.translit(fname)
       #       res = ""
       #       c = 0
