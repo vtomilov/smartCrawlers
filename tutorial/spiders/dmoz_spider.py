@@ -2,50 +2,16 @@
 import scrapy
 import random
 import time
-from subprocess import Popen
+from subprocess import Popen, PIPE
 import os
 from transliterate import translit, get_available_language_codes
 import urllib
+import re
 
 from tutorial.items import DmozItem
 class DmozSpider(scrapy.Spider):
     name = "dmoz"
-    taglist = [
-            "крем",
-            "гель",
-            "для лица",
-            "для волос",
-            "для тела",
-            "пудра",
-            "лак",
-            "для ногтей",
-            "шампунь",
-            "мыло",
-            "для губ",
-            "лосьон",
-            "помада",
-            "блеск",
-            "тени",
-            "тушь",
-            "тональный",
-            "бронзер",
-            "румяна",
-            "мицеллярная вода",
-            "термальная вода",
-            "хайлайтер",
-            "для рук",
-            "скраб",
-            "карандаш",
-            "для глаз",
-            "для век",
-            "бальзам",
-            "палетка",
-            "консилер",
-            "корректор",
-            "краска",
-            "маска",
-            "кисть",
-            ]
+    
     allowed_domains = ["beautydiscount.ru"]
     start_urls = []
     def __init__(self, start_url=None, *args, **kwargs):
@@ -54,67 +20,39 @@ class DmozSpider(scrapy.Spider):
         self.handles = {}
         self.cnt = 32
         self.sku = 15000
+        self.uni2ascii = {
+            u'\xe2\x80\x99': u"'",
+            u'\xe2\x80\x9c': u'"',
+            u'\xe2\x80\x9d': u'"',
+            u'\xe2\x80\x9e': u'"',
+            u'\xe2\x80\x9f': u'"',
+            u'\xc3\xa9': u'e',
+            u'\xe2\x80\x9c': u'"',
+            u'\xe2\x80\x93': u'-',
+            u'\xe2\x80\x92': u'-',
+            u'\xe2\x80\x94': u'-',
+            u'\xe2\x80\x94': u'-',
+            u'\xe2\x80\x98': u"'",
+            u'\xe2\x80\x9b': u"'",
 
+            u'\xe2\x80\x90': u'-',
+            u'\xe2\x80\x91': u'-',
 
- #    start_urls = [
-# 'http://beautydiscount.ru/catalog/everyday-minerals-ssha?page=all',
-# 'http://beautydiscount.ru/catalog/lumene-finlyandiya?page=all',
-# 'http://beautydiscount.ru/catalog/pupa?page=all',
-# 'http://beautydiscount.ru/catalog/opi-ssha?page=all',
-# 'http://beautydiscount.ru/catalog/londa-germaniya',
-# 'http://beautydiscount.ru/catalog/weleda-germaniya?page=all',
-# 'http://beautydiscount.ru/catalog/rimmel-velikobritaniya?page=all',
-# 'http://beautydiscount.ru/catalog/revlon-professional-ispaniya?page=all',
-# 'http://beautydiscount.ru/catalog/maybelline?page=all',
-# 'http://beautydiscount.ru/catalog/max-factor-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/anna-lotan-izrail?page=all',
- # 'http://beautydiscount.ru/catalog/anny-cosmetics-germaniya?page=all',
- # 'http://beautydiscount.ru/catalog/batiste-velikobritaniya-',
- # 'http://beautydiscount.ru/catalog/beauty-blender-ssha',
- # 'http://beautydiscount.ru/catalog/beauty-essential-rossiya',
- # 'http://beautydiscount.ru/catalog/biotherm-frantsiya?page=all',
- # 'http://beautydiscount.ru/catalog/crest_3d_white',
- # 'http://beautydiscount.ru/catalog/carmex-ssha',
- # 'http://beautydiscount.ru/catalog/embryolisse-frantsiya-?page=all',
- # 'http://beautydiscount.ru/catalog/dose-of-colors-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/helena-rubinstein-avstraliya?page=all',
- # 'http://beautydiscount.ru/catalog/invisibobble-?page=all',
- # 'http://beautydiscount.ru/catalog/japan-gals-yaponiya?page=all',
- # 'http://beautydiscount.ru/catalog/mythic-oil---dlya-zaschity',
- # 'http://beautydiscount.ru/catalog/hairchalk---makiyazh-dlya-volos',
- # 'http://beautydiscount.ru/catalog/lime-crime-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/lucas-papaw-remedies-avstraliya',
- # 'http://beautydiscount.ru/catalog/macadamia-natural-oil-ssha',
- # 'http://beautydiscount.ru/catalog/mizon-koreya?page=all',
- # 'http://beautydiscount.ru/catalog/moroccanoil-izrail?page=all',
- # 'http://beautydiscount.ru/catalog/missha-koreya?page=all',
- # 'http://beautydiscount.ru/catalog/nyx-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/organic-shop-rossiya?page=all',
- # 'http://beautydiscount.ru/catalog/redken-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/sally-hansen-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/sleek_makeup?page=all',
- # 'http://beautydiscount.ru/catalog/tangle-teezer-velikobritaniya?page=all',
- # 'http://beautydiscount.ru/catalog/thebalm-ssha-?page=all',
- # 'http://beautydiscount.ru/catalog/tony-moly-koreya?page=all',
- # 'http://beautydiscount.ru/catalog/yves-saint-laurent-frantsiya?page=all',
- # 'http://beautydiscount.ru/catalog/wet-and-wild-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/real-techniques-ssha',
- # 'http://beautydiscount.ru/catalog/wella-germaniya?page=all',
- # 'http://beautydiscount.ru/catalog/revlon-professional-ispaniya?page=all',
- # 'http://beautydiscount.ru/catalog/wella-system-professional-germaniya?page=all',
- # 'http://beautydiscount.ru/catalog/divage-rossiya?page=all',
- # 'http://beautydiscount.ru/catalog/hair-bobbles-daniya?page=all',
- # 'http://beautydiscount.ru/catalog/lancome-frantsiya?page=all',
- # 'http://beautydiscount.ru/catalog/kerastase-frantsiya?page=all',
- # 'http://beautydiscount.ru/catalog/lebel-yaponiya?page=all',
- # 'http://beautydiscount.ru/catalog/catrice-germaniya?page=all',
- # 'http://beautydiscount.ru/catalog/artdeco-germaniya?page=all',
- # 'http://beautydiscount.ru/catalog/korres-gretsiya?page=all',
- # 'http://beautydiscount.ru/catalog/lucas-papaw-remedies-avstraliya?page=all',
- # 'http://beautydiscount.ru/catalog/elf-ssha?page=all',
- # 'http://beautydiscount.ru/catalog/eos-ssha?page=all', 
- # 'http://beautydiscount.ru/catalog/essence-germaniya?page=all',
- #    ]
+            u'\xe2\x80\xb2': u"'",
+            u'\xe2\x80\xb3': u"'",
+            u'\xe2\x80\xb4': u"'",
+            u'\xe2\x80\xb5': u"'",
+            u'\xe2\x80\xb6': u"'",
+            u'\xe2\x80\xb7': u"'",
+
+            u'\xe2\x81\xba': u"+",
+            u'\xe2\x81\xbb': u"-",
+            u'\xe2\x81\xbc': u"=",
+            u'\xe2\x81\xbd': u"(",
+            u'\xe2\x81\xbe': u")",
+            }
+
+ 
                                       
 #response.xpath('//div[@class="product product_on_sale_page"]/div[@class="product_info"]').xpath('h3/a/span/text()').extract()                     
     def parse(self, response):
@@ -136,12 +74,23 @@ class DmozSpider(scrapy.Spider):
             fname = Image_Src.split('/')[-1]
             defaultName = False
             try:
-                fname = urllib.unquote(fname).decode('utf8')
+                fname = urllib.unquote(fname)
             except UnicodeEncodeError:
-                print (u"Can't decode %s" %fname)
+                print (u"Can't decode %s" % Image_Src)
                 dirname = 100
                 defaultName = True
-            
+
+            d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
+            if (not os.path.exists(d)):
+                os.mkdir(d)
+
+            while (len(os.walk("/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname).next()[2]) >= 100):
+                dirname += 1
+                d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
+                if (not os.path.exists(d)):
+                    os.mkdir(d)
+
+            fname = self.dl(Image_Src, dirname)
             fname = fname.replace("(", "").replace(")", "")
             fname = self.translit(fname)
       #       res = ""
@@ -165,17 +114,7 @@ class DmozSpider(scrapy.Spider):
             item['Image_Src'] = "https://cdn.shopify.com/s/files/1/1316/6641/files/" + fname
             item['Vendor'] = " ".join(response.request.url.split('/')[-1].split('?')[0].split('-')[:-1]).title()
 
-            d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
-            if (not os.path.exists(d)):
-                os.mkdir(d)
-
-            while (len(os.walk("/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname).next()[2]) >= 100):
-                dirname += 1
-                d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
-                if (not os.path.exists(d)):
-                    os.mkdir(d)
-
-            self.dl(Image_Src, fname, defaultName, dirname)
+            
             item['Description'] = sel.xpath('div[@class="product_info"]/h3/a/text()[2]').extract_first().strip()
             price = int(sel.xpath('div[@class="product_info"]//tr[@class="variant"]//span[@class="price"]/text()').extract()[0].replace(" ", ""))
             price = int(1.05 * price)
@@ -187,15 +126,26 @@ class DmozSpider(scrapy.Spider):
             self.sku += 1
             yield item
 
-    def dl(self, url, filename, defaultName, dirname):
+    def dl(self, url, dirname):
         time.sleep(0.01)
         d = "/Users/vtomilov/Downloads/scrapy_venv/tutorial/images/%s/" % dirname
-        if (defaultName):
-            prc = Popen("wget -P %s %s" % (d, url), shell=True)
-            prc.wait()
-        else:
-            prc = Popen("wget -O %s%s %s" % (d, filename, url), shell=True)
-            prc.wait()
+        prc = Popen("wget -P %s %s" % (d, url), shell=True, stderr=PIPE, stdout=PIPE)
+        out, err = prc.communicate()
+        err = unicode(err, errors='ignore')
+        fname = re.search("Saving to: (.+)", err, flags=re.UNICODE).group(1)
+        for key, value in self.uni2ascii.items():
+            try:
+                fname = fname.replace(key, value)
+            except UnicodeDecodeError:
+                print(fname, type(fname))
+                print(key, value)
+                print(type(key), type(value))
+                assert(False)
+        fname = fname.decode('utf8')[1:].split('/')[-1]
+        # pattern = re.compile('|'.join(self.uni2ascii.keys()), flags=re.UNICODE)
+        # fname = pattern.sub(lambda x: self.uni2ascii[x.group()], fname).decode('utf8')[1:-1].split('/')[-1]
+        return fname
+
 
     def translit(self, arg):
         return '-'.join(translit(arg, 'ru', reversed=True).split())
